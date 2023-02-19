@@ -155,3 +155,21 @@ void AmiVectorArray::copy(const AmiVectorArray &other) {
 }
 
 } // namespace amici
+
+std::ostream &operator<<(std::ostream &stream, N_Vector v)
+{
+    if(!v) {
+        stream<<"nullptr";
+        return stream;
+    }
+
+    Expects(N_VGetVectorID_Serial(v) == SUNDIALS_NVEC_SERIAL);
+    stream<<"[";
+    auto data = NV_DATA_S(v);
+    auto length = NV_LENGTH_S(v);
+    for(sunindextype i = 0; i < length; ++i) {
+        stream<<data[i]<<", ";
+    }
+    stream<<"]";
+    return stream;
+}

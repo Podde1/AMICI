@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <type_traits>
+#include <iostream>
 
 #include <amici/exception.h>
 
@@ -387,6 +388,14 @@ inline realtype dotProd(AmiVector const& x, AmiVector const& y) {
 }
 
 } // namespace amici
+
+/**
+ * @brief Print _generic_N_Vector to stream
+ * @param stream Output stream
+ * @param v _generic_N_Vector to print
+ * @return stream
+ */
+std::ostream& operator<< (std::ostream& stream, N_Vector v);
 
 
 namespace gsl {

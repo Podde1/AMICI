@@ -3,6 +3,7 @@
 #include "amici/exception.h"
 #include "amici/model_ode.h"
 #include "amici/sundials_linsol_wrapper.h"
+#include "amici/vector.h"
 
 #include <cvodes/cvodes.h>
 #include <cvodes/cvodes_diag.h>
@@ -12,6 +13,9 @@
 #include <btf.h>
 #include <colamd.h>
 #include <klu.h>
+
+#include <iostream>
+#include <iomanip>
 
 #define ZERO RCONST(0.0)
 #define ONE RCONST(1.0)
@@ -33,6 +37,14 @@ static_assert((int)LinearMultistepMethod::BDF == CV_BDF, "");
 
 static_assert(AMICI_ROOT_RETURN == CV_ROOT_RETURN, "");
 
+
+/**
+ * @brief Print CVodeMemRec to stream
+ * @param stream Output stream
+ * @param mem CVodeMemRec to print
+ * @return stream
+ */
+std::ostream& operator<< (std::ostream& stream, const CVodeMemRec& mem);
 
 /*
  * The following static members are callback function to CVODES.
@@ -694,7 +706,11 @@ void CVodeSolver::getB(const int which) const {
 int CVodeSolver::solve(const realtype tout, const int itask) const {
     if (force_reinit_postprocess_F_)
         reInitPostProcessF(tout);
+    std::cout<<"\nBEGIN CVodeSolver::solve("<<tout<<", "<<itask<<")\n";
+    std::cout<<*static_cast<CVodeMem>(solver_memory_.get())<<"\n";
     int status = CVode(solver_memory_.get(), tout, x_.getNVector(), &t_, itask);
+    std::cout<<*static_cast<CVodeMem>(solver_memory_.get());
+    std::cout<<"END CVodeSolver::solve("<<tout<<", "<<itask<<")\n";
     if (status < 0) // status > 0 is okay and is used for e.g. root return
         throw IntegrationFailure(status, t_);
     solver_was_called_F_ = true;
@@ -1199,5 +1215,184 @@ static int fsxdot(int /*Ns*/, realtype t, N_Vector x, N_Vector /*xdot*/,
 bool operator==(const CVodeSolver &a, const CVodeSolver &b) {
     return static_cast<Solver const &>(a) == static_cast<Solver const &>(b);
 }
+
+
+std::ostream& operator<< (std::ostream& stream, const CVodeMemRec& mem) {
+    int width = 20;
+
+    stream<<std::setw(width)<<"cv_uround: "<<mem.cv_uround<<"\n";
+    stream<<std::setw(width)<<"cv_f: "<<mem.cv_f<<"\n";
+    stream<<std::setw(width)<<"cv_user_data: "<<mem.cv_user_data<<"\n";
+    stream<<std::setw(width)<<"cv_lmm: "<<mem.cv_lmm<<"\n";
+    stream<<std::setw(width)<<"cv_itol: "<<mem.cv_itol<<"\n";
+    stream<<std::setw(width)<<"cv_reltol: "<<mem.cv_reltol<<"\n";
+    stream<<std::setw(width)<<"cv_Sabstol: "<<mem.cv_Sabstol<<"\n";
+    stream<<std::setw(width)<<"cv_Vabstol: "<<mem.cv_Vabstol<<"\n";
+    stream<<std::setw(width)<<"cv_atolmin0: "<<mem.cv_atolmin0<<"\n";
+    stream<<std::setw(width)<<"cv_user_efun: "<<mem.cv_user_efun<<"\n";
+    stream<<std::setw(width)<<"cv_efun: "<<mem.cv_efun<<"\n";
+    stream<<std::setw(width)<<"cv_e_data: "<<mem.cv_e_data<<"\n";
+    stream<<std::setw(width)<<"cv_constraintsSet: "<<mem.cv_constraintsSet<<"\n";
+
+    stream<<std::setw(width)<<"cv_quadr: "<<mem.cv_quadr<<"\n";
+    stream<<std::setw(width)<<"cv_fQ: "<<mem.cv_fQ<<"\n";
+    stream<<std::setw(width)<<"cv_errconQ: "<<mem.cv_errconQ<<"\n";
+    stream<<std::setw(width)<<"cv_itolQ: "<<mem.cv_itolQ<<"\n";
+    stream<<std::setw(width)<<"cv_reltolQ: "<<mem.cv_reltolQ<<"\n";
+    stream<<std::setw(width)<<"cv_SabstolQ: "<<mem.cv_SabstolQ<<"\n";
+    stream<<std::setw(width)<<"cv_VabstolQ: "<<mem.cv_VabstolQ<<"\n";
+    stream<<std::setw(width)<<"cv_atolQmin0: "<<mem.cv_atolQmin0<<"\n";
+
+    stream<<std::setw(width)<<"cv_sensi: "<<mem.cv_sensi<<"\n";
+    stream<<std::setw(width)<<"cv_Ns: "<<mem.cv_Ns<<"\n";
+    stream<<std::setw(width)<<"cv_ism: "<<mem.cv_ism<<"\n";
+    stream<<std::setw(width)<<"cv_fS: "<<mem.cv_fS<<"\n";
+    stream<<std::setw(width)<<"cv_fS1: "<<mem.cv_fS1<<"\n";
+    stream<<std::setw(width)<<"cv_fS_data: "<<mem.cv_fS_data<<"\n";
+    stream<<std::setw(width)<<"cv_fSDQ: "<<mem.cv_fSDQ<<"\n";
+    stream<<std::setw(width)<<"cv_ifS: "<<mem.cv_ifS<<"\n";
+    stream<<std::setw(width)<<"cv_p: "<<mem.cv_p<<"\n";
+    stream<<std::setw(width)<<"cv_pbar: "<<mem.cv_pbar<<"\n";
+    stream<<std::setw(width)<<"cv_plist: "<<mem.cv_plist<<"\n";
+    stream<<std::setw(width)<<"cv_DQtype: "<<mem.cv_DQtype<<"\n";
+    stream<<std::setw(width)<<"cv_DQrhomax: "<<mem.cv_DQrhomax<<"\n";
+    stream<<std::setw(width)<<"cv_errconS: "<<mem.cv_errconS<<"\n";
+    stream<<std::setw(width)<<"cv_itolS: "<<mem.cv_itolS<<"\n";
+    stream<<std::setw(width)<<"cv_reltolS: "<<mem.cv_reltolS<<"\n";
+    stream<<std::setw(width)<<"cv_SabstolS: "<<mem.cv_SabstolS<<"\n";
+    stream<<std::setw(width)<<"cv_VabstolS: "<<mem.cv_VabstolS<<"\n";
+    stream<<std::setw(width)<<"cv_atolSmin0: "<<mem.cv_atolSmin0<<"\n";
+
+    stream<<std::setw(width)<<"cv_quadr_sensi: "<<mem.cv_quadr_sensi<<"\n";
+    stream<<std::setw(width)<<"cv_fQS: "<<mem.cv_fQS<<"\n";
+    stream<<std::setw(width)<<"cv_fQS_data: "<<mem.cv_fQS_data<<"\n";
+    stream<<std::setw(width)<<"cv_fQSDQ: "<<mem.cv_fQSDQ<<"\n";
+    stream<<std::setw(width)<<"cv_errconQS: "<<mem.cv_errconQS<<"\n";
+    stream<<std::setw(width)<<"cv_itolQS: "<<mem.cv_itolQS<<"\n";
+    stream<<std::setw(width)<<"cv_reltolQS: "<<mem.cv_reltolQS<<"\n";
+    stream<<std::setw(width)<<"cv_SabstolQS: "<<mem.cv_SabstolQS<<"\n";
+    stream<<std::setw(width)<<"cv_VabstolQS: "<<mem.cv_VabstolQS<<"\n";
+    stream<<std::setw(width)<<"cv_atolQSmin0: "<<mem.cv_atolQSmin0<<"\n";
+
+    stream<<std::setw(width)<<"cv_zn: "<<mem.cv_zn<<"\n";
+
+    stream<<std::setw(width)<<"cv_ewt: "<<mem.cv_ewt<<"\n";
+    stream<<std::setw(width)<<"cv_y: "<<mem.cv_y<<"\n";
+    stream<<std::setw(width)<<"cv_acor: "<<mem.cv_acor<<"\n";
+    stream<<std::setw(width)<<"cv_tempv: "<<mem.cv_tempv<<"\n";
+    stream<<std::setw(width)<<"cv_ftemp: "<<mem.cv_ftemp<<"\n";
+    stream<<std::setw(width)<<"cv_vtemp1: "<<mem.cv_vtemp1<<"\n";
+    stream<<std::setw(width)<<"cv_vtemp2: "<<mem.cv_vtemp2<<"\n";
+    stream<<std::setw(width)<<"cv_vtemp3: "<<mem.cv_vtemp3<<"\n";
+    stream<<std::setw(width)<<"cv_constraints: "<<mem.cv_constraints<<"\n";
+
+    stream<<std::setw(width)<<"cv_znQ: "<<mem.cv_znQ<<"\n";
+    stream<<std::setw(width)<<"cv_ewtQ: "<<mem.cv_ewtQ<<"\n";
+    stream<<std::setw(width)<<"cv_yQ: "<<mem.cv_yQ<<"\n";
+    stream<<std::setw(width)<<"cv_acorQ: "<<mem.cv_acorQ<<"\n";
+    stream<<std::setw(width)<<"cv_tempvQ: "<<mem.cv_tempvQ<<"\n";
+
+    stream<<std::setw(width)<<"cv_znS: "<<mem.cv_znS<<"\n";
+    stream<<std::setw(width)<<"cv_ewtS: "<<mem.cv_ewtS<<"\n";
+    stream<<std::setw(width)<<"cv_yS: "<<mem.cv_yS<<"\n";
+    stream<<std::setw(width)<<"cv_acorS: "<<mem.cv_acorS<<"\n";
+    stream<<std::setw(width)<<"cv_tempvS: "<<mem.cv_tempvS<<"\n";
+    stream<<std::setw(width)<<"cv_ftempS: "<<mem.cv_ftempS<<"\n";
+    stream<<std::setw(width)<<"cv_stgr1alloc: "<<mem.cv_stgr1alloc<<"\n";
+
+    stream<<std::setw(width)<<"cv_znQS: "<<mem.cv_znQS<<"\n";
+    stream<<std::setw(width)<<"cv_ewtQS: "<<mem.cv_ewtQS<<"\n";
+    stream<<std::setw(width)<<"cv_yQS: "<<mem.cv_yQS<<"\n";
+    stream<<std::setw(width)<<"cv_acorQS: "<<mem.cv_acorQS<<"\n";
+    stream<<std::setw(width)<<"cv_tempvQS: "<<mem.cv_tempvQS<<"\n";
+    stream<<std::setw(width)<<"cv_ftempQ: "<<mem.cv_ftempQ<<"\n";
+
+    stream<<std::setw(width)<<"cv_tstopset: "<<mem.cv_tstopset<<"\n";
+    stream<<std::setw(width)<<"cv_tstop: "<<mem.cv_tstop<<"\n";
+
+    stream<<std::setw(width)<<"cv_q: "<<mem.cv_q<<"\n";
+    stream<<std::setw(width)<<"cv_qprime: "<<mem.cv_qprime<<"\n";
+    stream<<std::setw(width)<<"cv_next_q: "<<mem.cv_next_q<<"\n";
+    stream<<std::setw(width)<<"cv_qwait: "<<mem.cv_qwait<<"\n";
+    stream<<std::setw(width)<<"cv_L: "<<mem.cv_L<<"\n";
+    stream<<std::setw(width)<<"cv_hin: "<<mem.cv_hin<<"\n";
+    stream<<std::setw(width)<<"cv_h: "<<mem.cv_h<<"\n";
+    stream<<std::setw(width)<<"cv_hprime: "<<mem.cv_hprime<<"\n";
+    stream<<std::setw(width)<<"cv_next_h: "<<mem.cv_next_h<<"\n";
+    stream<<std::setw(width)<<"cv_eta: "<<mem.cv_eta<<"\n";
+    stream<<std::setw(width)<<"cv_hscale: "<<mem.cv_hscale<<"\n";
+    stream<<std::setw(width)<<"cv_tn: "<<mem.cv_tn<<"\n";
+    stream<<std::setw(width)<<"cv_tretlast: "<<mem.cv_tretlast<<"\n";
+    stream<<std::setw(width)<<"cv_tau: "<<mem.cv_tau<<"\n";
+    stream<<std::setw(width)<<"cv_tq: "<<mem.cv_tq<<"\n";
+    stream<<std::setw(width)<<"cv_l: "<<mem.cv_l<<"\n";
+    stream<<std::setw(width)<<"cv_rl1: "<<mem.cv_rl1<<"\n";
+    stream<<std::setw(width)<<"cv_gamma: "<<mem.cv_gamma<<"\n";
+    stream<<std::setw(width)<<"cv_gammap: "<<mem.cv_gammap<<"\n";
+    stream<<std::setw(width)<<"cv_gamrat: "<<mem.cv_gamrat<<"\n";
+    stream<<std::setw(width)<<"cv_crate: "<<mem.cv_crate<<"\n";
+    stream<<std::setw(width)<<"cv_crateS: "<<mem.cv_crateS<<"\n";
+    stream<<std::setw(width)<<"cv_delp: "<<mem.cv_delp<<"\n";
+    stream<<std::setw(width)<<"cv_acnrm: "<<mem.cv_acnrm<<"\n";
+    stream<<std::setw(width)<<"cv_acnrmcur: "<<mem.cv_acnrmcur<<"\n";
+    stream<<std::setw(width)<<"cv_acnrmQ: "<<mem.cv_acnrmQ<<"\n";
+    stream<<std::setw(width)<<"cv_acnrmS: "<<mem.cv_acnrmS<<"\n";
+    stream<<std::setw(width)<<"cv_acnrmScur: "<<mem.cv_acnrmScur<<"\n";
+    stream<<std::setw(width)<<"cv_acnrmQS: "<<mem.cv_acnrmQS<<"\n";
+    stream<<std::setw(width)<<"cv_nlscoef: "<<mem.cv_nlscoef<<"\n";
+    stream<<std::setw(width)<<"cv_ncfS1: "<<mem.cv_ncfS1<<"\n";
+
+    stream<<std::setw(width)<<"cv_qmax: "<<mem.cv_qmax<<"\n";
+    stream<<std::setw(width)<<"cv_mxstep: "<<mem.cv_mxstep<<"\n";
+    stream<<std::setw(width)<<"cv_mxhnil: "<<mem.cv_mxhnil<<"\n";
+    stream<<std::setw(width)<<"cv_maxnef: "<<mem.cv_maxnef<<"\n";
+    stream<<std::setw(width)<<"cv_maxncf: "<<mem.cv_maxncf<<"\n";
+    stream<<std::setw(width)<<"cv_hmin: "<<mem.cv_hmin<<"\n";
+    stream<<std::setw(width)<<"cv_hmax_inv: "<<mem.cv_hmax_inv<<"\n";
+    stream<<std::setw(width)<<"cv_etamax: "<<mem.cv_etamax<<"\n";
+
+    stream<<std::setw(width)<<"cv_nst: "<<mem.cv_nst<<"\n";
+    stream<<std::setw(width)<<"cv_nfe: "<<mem.cv_nfe<<"\n";
+    stream<<std::setw(width)<<"cv_nfQe: "<<mem.cv_nfQe<<"\n";
+    stream<<std::setw(width)<<"cv_nfSe: "<<mem.cv_nfSe<<"\n";
+    stream<<std::setw(width)<<"cv_nfeS: "<<mem.cv_nfeS<<"\n";
+    stream<<std::setw(width)<<"cv_nfQSe: "<<mem.cv_nfQSe<<"\n";
+    stream<<std::setw(width)<<"cv_nfQeS: "<<mem.cv_nfQeS<<"\n";
+    stream<<std::setw(width)<<"cv_ncfn: "<<mem.cv_ncfn<<"\n";
+    stream<<std::setw(width)<<"cv_ncfnS: "<<mem.cv_ncfnS<<"\n";
+    stream<<std::setw(width)<<"cv_ncfnS1: "<<mem.cv_ncfnS1<<"\n";
+    stream<<std::setw(width)<<"cv_nni: "<<mem.cv_nni<<"\n";
+    stream<<std::setw(width)<<"cv_nniS: "<<mem.cv_nniS<<"\n";
+    stream<<std::setw(width)<<"cv_nniS1: "<<mem.cv_nniS1<<"\n";
+    stream<<std::setw(width)<<"cv_netf: "<<mem.cv_netf<<"\n";
+    stream<<std::setw(width)<<"cv_netfQ: "<<mem.cv_netfQ<<"\n";
+    stream<<std::setw(width)<<"cv_netfS: "<<mem.cv_netfS<<"\n";
+    stream<<std::setw(width)<<"cv_netfQS: "<<mem.cv_netfQS<<"\n";
+    stream<<std::setw(width)<<"cv_nsetups: "<<mem.cv_nsetups<<"\n";
+    stream<<std::setw(width)<<"cv_nsetupsS: "<<mem.cv_nsetupsS<<"\n";
+    stream<<std::setw(width)<<"cv_nhnil: "<<mem.cv_nhnil<<"\n";
+
+    stream<<std::setw(width)<<"cv_etaqm1: "<<mem.cv_etaqm1<<"\n";
+    stream<<std::setw(width)<<"cv_etaq: "<<mem.cv_etaq<<"\n";
+    stream<<std::setw(width)<<"cv_etaqp1: "<<mem.cv_etaqp1<<"\n";
+
+    /* ..... */
+    stream<<std::setw(width)<<"cv_qu: "<<mem.cv_qu<<"\n";
+    stream<<std::setw(width)<<"cv_nstlp: "<<mem.cv_nstlp<<"\n";
+    stream<<std::setw(width)<<"cv_h0u: "<<mem.cv_h0u<<"\n";
+    stream<<std::setw(width)<<"cv_hu: "<<mem.cv_hu<<"\n";
+    stream<<std::setw(width)<<"cv_saved_tq5: "<<mem.cv_saved_tq5<<"\n";
+    stream<<std::setw(width)<<"cv_jcur: "<<mem.cv_jcur<<"\n";
+    stream<<std::setw(width)<<"cv_convfail: "<<mem.cv_convfail<<"\n";
+    stream<<std::setw(width)<<"cv_tolsf: "<<mem.cv_tolsf<<"\n";
+    stream<<std::setw(width)<<"cv_qmax_alloc: "<<mem.cv_qmax_alloc<<"\n";
+    stream<<std::setw(width)<<"cv_qmax_allocQ: "<<mem.cv_qmax_allocQ<<"\n";
+    stream<<std::setw(width)<<"cv_qmax_allocS: "<<mem.cv_qmax_allocS<<"\n";
+    stream<<std::setw(width)<<"cv_qmax_allocQS: "<<mem.cv_qmax_allocQS<<"\n";
+    stream<<std::setw(width)<<"cv_indx_acor: "<<mem.cv_indx_acor<<"\n";
+
+    return stream;
+}
+
 
 } // namespace amici
